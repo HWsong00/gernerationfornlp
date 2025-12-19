@@ -1,18 +1,22 @@
-data/
-.env
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+*.pt
+*.bin
+*.ckpt
 
-__pycache__
-.idea
-
-.venv
-
-.cache
-
+# Jupyter
 .ipynb_checkpoints/
-.ipython/
-.jupyter/
-.local/
-.cache/
-.nv/
+*.ipynb_checkpoints
 
-.vscode
+# 학습 결과
+trainer_output/
+unsloth_*/
+data/
+
+# IDE
+.vscode/
+.idea/
