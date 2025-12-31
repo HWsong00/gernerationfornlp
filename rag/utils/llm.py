@@ -1,6 +1,6 @@
 import os
 from huggingface_hub import hf_hub_download
-from langchain_community.llms import LlamaCpp
+from langchain_community.chat_models import ChatLlamaCpp
 
 # 다른 파일에서 이 변수들을 참조할 수 있게 상수로 빼둡니다.
 REPO_ID = "unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF"
@@ -21,7 +21,7 @@ def get_llm():
         )
 
         # LlamaCpp 인스턴스 생성
-        _llm_instance = LlamaCpp(
+        _llm_instance = ChatLlamaCpp(
             model_path=model_path,
             n_gpu_layers=-1,      # L4 GPU 전체 사용
             n_ctx=32768,          # 긴 문맥 지원

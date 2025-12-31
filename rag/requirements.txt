@@ -1,0 +1,25 @@
+# --- Core Math & Data (NumPy 2.0 충돌 방지 필수) ---
+numpy
+pandas
+tqdm
+python-dotenv
+
+# --- LLM Infrastructure (LlamaCpp) ---
+# 로컬/코랩 GPU 가속을 위해 설치 시 별도 환경변수 설정 권장
+llama-cpp-python
+
+# --- LangChain & Workflow Orchestration ---
+langchain
+langchain-community
+langchain-huggingface
+langgraph
+langfuse
+
+# --- Korean RAG & NLP ---
+kiwipiepy       # Kiwi 형태소 분석기
+bm25s           # BM25s 리트리버
+huggingface_hub # 모델 다운로드 및 허브 관리
+
+# --- Utility ---
+requests
+setuptools

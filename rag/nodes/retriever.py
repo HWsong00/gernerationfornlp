@@ -1,68 +1,62 @@
-"""
-Retriever Node: 전략 분류, 쿼리 생성, Dual Search 수행
-"""
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from .state import MCQState
-from utils.llm import llm_with_params
+###################################################################################
 
-def retrieve_node(state: MCQState):
-    """
-    한국사 문제에 대해 전략을 분류하고, 키워드를 생성하며, Dual Search를 수행하는 노드
+import re
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from nodes.state import MCQState
+from utils.llm import get_llm
+
+def retrieve_node(state: MCQState, ensemble_retriever):
+    llm = get_llm()
+    p_id = state['id']
     
-    Args:
-        state: MCQState
-        
-    Returns:
-        dict: {
-            "strategy": str,
-            "summary": str,
-            "optimized_query": str,
-            "retrieved_context": str
-        }
-    """
-    if not state.get('is_history'):
-        return {"retrieved_context": "한국사 문제가 아니므로 검색을 생략합니다."}
+    # --- Phase 1: 키워드 추출 ---
+    kw_prompt = ChatPromptTemplate.from_messages([
+        KEYWORDS_GEN_SYS_TEMPLATE,
+        HumanMessagePromptTemplate.from_template("지문: {paragraph}\n질문: {question}\n선지: {choices}")
+    ])
+    kw_result = kw_chain.invoke({
+        "paragraph": state['paragraph'], "question": state['question'], "choices": "\n".join(state['choices'])
+    }).content
 
-    # Phase 1: INFERENCE vs GENERAL 분류
-    router_prompt = ChatPromptTemplate.from_template(
-        "<|im_start|>system\n문제를 분류하세요: \n"
-        "- **INFERENCE**: (가), '이 왕', '이 단체' 등 주어가 생략되어 추론이 필요한 경우\n"
-        "- **GENERAL**: 대상이 명확한 사실 확인 문제\n"
-        "단어 하나만 출력하세요.<|im_end|>\n"
-        "<|im_start|>user\n지문: {paragraph}\n질문: {question}\n분류:<|im_end|>\n<|im_start|>assistant\n"
-    )
-    
-    # Note: llm_with_params는 외부에서 정의되어야 함
-    strategy = (router_prompt | llm_with_params | StrOutputParser()).invoke(state).strip()
+    # --- Phase 2: 정규표현식 파싱 (None 가능성 유지) ---
+    p_match = re.search(r"P:\s*(.*)", kw_result)
+    q_match = re.search(r"Q:\s*(.*)", kw_result)
+    c_match = re.search(r"C:\s*(.*)", kw_result)
 
-    # Phase 2: 요약 및 10대 키워드 생성 (병렬 처리 권장이나 여기선 순차 구현)
-    gen_prompt = ChatPromptTemplate.from_template(
-        "<|im_start|>system\n당신은 역사 전문가입니다. 다음 지침을 따르세요:\n"
-        "1. 지문을 2문장 이내로 핵심 요약하세요.\n"
-        "2. 검색을 위한 핵심 키워드를 '콤마'로 구분하여 10개 이내로 뽑으세요.\n"
-        "형식: 요약: [내용] / 키워드: [키워드들]<|im_end|>\n"
-        "<|im_start|>user\n지문: {paragraph}\n질문: {question}\n결과:<|im_end|>\n<|im_start|>assistant\n"
-    )
-    gen_res = (gen_prompt | llm_with_params | StrOutputParser()).invoke(state)
+    # --- Phase 3: 동적 검색 리스트 구성 ---
+    # 원본(Raw) 검색은 무조건 수행
+    search_tasks = [
+        ("P_Raw", state['paragraph']),
+        ("Q_Raw", state['question']),
+        ("C_Raw", " ".join(state['choices']))
+    ]
 
-    summary = gen_res.split("요약:")[1].split("/ 키워드:")[0].strip()
-    keywords = gen_res.split("키워드:")[1].strip()
+    # 파싱에 성공한 요약본(Summary)이 있을 때만 검색 리스트에 추가
+    if p_match and p_match.group(1).strip():
+        search_tasks.append(("P_Sum", p_match.group(1).strip()))
+    if q_match and q_match.group(1).strip():
+        search_tasks.append(("Q_Sum", q_match.group(1).strip()))
+    if c_match and c_match.group(1).strip():
+        search_tasks.append(("C_Sum", c_match.group(1).strip()))
 
-    print(f"   🚦 [전략]: {strategy} | ✨ [키워드]: {keywords}")
+    # --- Phase 4: 앙상블 검색 실행 ---
+    all_retrieved_docs = []
+    p_vector = state['precomputed_vectors'][p_id]['paragraph']
 
-    # Phase 3: Dual Search (키워드 쿼리 + 지문 요약)
-    # Note: hybrid_retriever는 외부에서 정의되어야 함
-    docs_query = hybrid_retriever.invoke(keywords)
-    docs_summary = hybrid_retriever.invoke(summary)
+    for label, query in search_tasks:
+        print(f"📡 [Retriever] {label} 검색 실행...")
+        docs = ensemble_retriever.invoke_ensemble(query, p_vector)
+        all_retrieved_docs.extend(docs)
 
-    # 중복 제거 및 컨텍스트 조립
-    combined = {d.page_content: d for d in (docs_query + docs_summary)}.values()
-    para_context = "\n".join([f"- {d.page_content}" for d in list(combined)[:6]])
+    # --- Phase 5: 중복 제거 및 최종 컨텍스트 구성 ---
+    unique_docs = []
+    seen = set()
+    for d in all_retrieved_docs:
+        if d.page_content not in seen:
+            unique_docs.append(d)
+            seen.add(d.page_content)
 
-    return {
-        "strategy": strategy,
-        "summary": summary,
-        "optimized_query": keywords,
-        "retrieved_context": f"전략: {strategy}\n요약: {summary}\n참고자료:\n{para_context}"
-    }
+    final_docs = unique_docs[:8]
+    context_str = "\n".join([f"[{i+1}] {d.page_content}" for i, d in enumerate(final_docs)])
+
+    return {"retrieved_context": f"=== [교차 검증된 역사 사료 전문] ===\n{context_str}"}
