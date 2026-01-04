@@ -1,9 +1,4 @@
 #########################################################################################################
-
-
-
-
-
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from nodes.state import MCQState
 from utils.llm import get_llm

@@ -1,3 +1,6 @@
+import os
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+
 import gc
 from typing import List, Any, Optional, Callable
 from langchain_core.retrievers import BaseRetriever
