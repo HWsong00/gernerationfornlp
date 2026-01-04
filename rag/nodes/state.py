@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, Any, List, Optional
 from typing_extensions import TypedDict
 
 class MCQState(TypedDict):
