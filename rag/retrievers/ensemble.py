@@ -6,7 +6,7 @@ class CustomWeightedEnsembleRetriever:
     def __init__(
         self, 
         sparse_retriever: Any, 
-        vectorstore: Any, # 리트리버 객체 대신 vectorstore를 직접 받음
+        vectorstore: Any, 
         weights: List[float] = [0.7, 0.3], 
         top_k: int = 4,
         k_constant: int = 20
@@ -17,26 +17,28 @@ class CustomWeightedEnsembleRetriever:
         self.top_k = top_k
         self.k_constant = k_constant
 
-    def invoke_ensemble(self, query: str, query_vector: List[float]) -> List[Document]:
+    def invoke_ensemble(self, query: str) -> List[Document]:
         """
-        텍스트 쿼리와 사전 계산된 벡터를 동시에 사용하여 앙상블 검색을 수행합니다.
+        텍스트 쿼리를 받아 Sparse와 Dense 검색 결과를 실시간으로 통합합니다.
+        (사전 계산된 벡터 대신 실시간 GPU 임베딩을 활용합니다.)
         """
-        # [Step 1] Sparse 검색 (텍스트 기반)
+        # [Step 1] Sparse 검색 (Kiwi-BM25)
         sparse_docs = self.sparse_retriever.invoke(query)
         
-        # [Step 2] Dense 검색 (사전 계산된 벡터 기반)
-        # 임베딩 모델을 거치지 않고 바로 벡터로 검색하므로 VRAM 사용량 0, 속도 최상!
-        dense_docs = self.vectorstore.similarity_search_by_vector(query_vector, k=self.top_k)
+        # [Step 2] Dense 검색 (실시간 GPU 임베딩 기반)
+        # dense_retriever.py에서 vectorstore 생성 시 임베딩 모델을 주입했으므로 
+        # similarity_search만 호출해도 상주 중인 GPU 모델이 자동으로 벡터화하여 검색합니다.
+        dense_docs = self.vectorstore.similarity_search(query, k=self.top_k)
 
         # [Step 3] RRF(Reciprocal Rank Fusion) 앙상블 계산
         all_docs = {}
 
-        # Sparse 결과 처리 (BM25)
+        # Sparse 결과 처리
         for rank, doc in enumerate(sparse_docs):
             score = self.weights[0] / (self.k_constant + rank + 1)
             all_docs[doc.page_content] = {"doc": doc, "score": score}
 
-        # Dense 결과 처리 (Vector)
+        # Dense 결과 처리
         for rank, doc in enumerate(dense_docs):
             score = self.weights[1] / (self.k_constant + rank + 1)
             if doc.page_content in all_docs:
