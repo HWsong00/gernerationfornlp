@@ -1,39 +1,35 @@
 import os
-from langfuse import Langfuse
 from langfuse.langchain import CallbackHandler
 
 def get_langfuse_handler():
-    """
-    코랩 보안 비밀(Secrets) 또는 .env에서 환경 변수를 로드하여 
-    Langfuse 핸들러를 반환합니다.
-    """
-    # 1. 키값 가져오기 (코랩 환경 우선, 실패 시 환경변수/os.getenv 시도)
     try:
+        # 1. 코랩 보안 비밀(Secrets) 우선 로드
         from google.colab import userdata
-        public_key = userdata.get("LANGFUSE_PUBLIC_KEY")
-        secret_key = userdata.get("LANGFUSE_SECRET_KEY")
+        pk = userdata.get("LANGFUSE_PUBLIC_KEY")
+        sk = userdata.get("LANGFUSE_SECRET_KEY")
         host = userdata.get("LANGFUSE_HOST")
     except (ImportError, Exception):
-        # 코랩이 아닐 경우 os.environ에서 가져옴 (dotenv 로드 가정)
-        public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-        secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+        # 2. 로컬 환경(.env 등) 대응
+        pk = os.getenv("LANGFUSE_PUBLIC_KEY")
+        sk = os.getenv("LANGFUSE_SECRET_KEY")
         host = os.getenv("LANGFUSE_HOST")
 
-    if not all([public_key, secret_key, host]):
-        print("⚠️ [Langfuse] 키값이 설정되지 않았습니다. 모니터링 없이 진행합니다.")
+    if not all([pk, sk, host]):
+        print("⚠️ [Langfuse] 키값이 설정되지 않았습니다. 로그 없이 진행합니다.")
         return None
 
+    # 환경 변수로 세팅하여 핸들러가 자동으로 인지하게 함
+    os.environ["LANGFUSE_PUBLIC_KEY"] = pk
+    os.environ["LANGFUSE_SECRET_KEY"] = sk
+    os.environ["LANGFUSE_HOST"] = host
+
     try:
-        langfuse_client = Langfuse(public_key=public_key, secret_key=secret_key, host=host)
-        
-        if langfuse_client.auth_check():
-            print("✅ [Langfuse] 연결 성공! 대시보드에서 로그를 확인하세요.")
-            return CallbackHandler(public_key=public_key, secret_key=secret_key, host=host)
-        else:
-            print("❌ [Langfuse] 인증 실패!")
-            return None
+        # langfuse.langchain의 CallbackHandler는 환경 변수를 자동으로 참조합니다.
+        handler = CallbackHandler() 
+        print("✅ [Langfuse] 핸들러 생성 성공!")
+        return handler
     except Exception as e:
-        print(f"❌ [Langfuse] 에러: {e}")
+        print(f"❌ [Langfuse] 생성 실패: {e}")
         return None
 
 # 전역 핸들러 인스턴스
