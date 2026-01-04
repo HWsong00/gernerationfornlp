@@ -1,6 +1,6 @@
 import os
 from langfuse import Langfuse
-from langfuse.callback import CallbackHandler
+from langfuse.langchain import CallbackHandler
 
 def get_langfuse_handler():
     """
