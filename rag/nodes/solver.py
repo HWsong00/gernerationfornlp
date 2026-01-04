@@ -44,14 +44,15 @@ def ko_history_solver_node(state: MCQState):
 
     print(f"🤖 [History Solver] 추론 시작 (ID: {state['id']})")
     
-    chain = prompt | llm
+    chain = prompt | llm.bind(stop=["}"])
+    
     response = chain.invoke({
         "paragraph": state['paragraph'],
         "question": state['question'],
         "choices": choices_str,
-        "retrieved_context": state.get('retrieved_context', "관련 사료를 찾지 못했습니다.")
+        "retrieved_context": state.get('retrieved_context', "")
     })
-
+    
     return {"full_response": response.content}
 
 

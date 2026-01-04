@@ -24,7 +24,7 @@ def get_llm():
         _llm_instance = ChatLlamaCpp(
             model_path=model_path,
             n_gpu_layers=-1,      # L4 GPU 전체 사용
-            n_ctx=32768,          # 긴 문맥 지원
+            n_ctx=16384,          # 긴 문맥 지원
             max_tokens=2048,
             temperature=0.7,
             top_p=0.90,

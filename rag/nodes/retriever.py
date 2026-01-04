@@ -74,7 +74,8 @@ def retrieve_node(state: MCQState, ensemble_retriever):
             seen_contents.add(d.page_content)
 
     # 상위 8개 문서 선택
-    final_docs = unique_docs[:8]
+    # 3개 문서로 수정
+    final_docs = unique_docs[:3]
     context_str = "\n".join([f"[{i+1}] {d.page_content}" for i, d in enumerate(final_docs)])
 
     print(f"✅ [Retriever] 검색 완료 (중복제거 후 {len(final_docs)}개 문서 확보)")
