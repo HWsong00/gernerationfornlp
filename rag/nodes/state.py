@@ -13,7 +13,7 @@ class MCQState(TypedDict):
     choices: List[str]      # 선지 리스트
 
     # 2. 분류 및 전략 (Classifier Node)
-    is_korean_history: bool # 한국사 여부
+    needs_knowledge: bool  # 기존 is_korean_history 수정
     strategy: str           # 검색 전략 (INFERENCE / GENERAL) - 필요 시 활용
 
     # 3. 검색 및 컨텍스트 (Retriever Node)

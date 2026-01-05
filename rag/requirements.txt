@@ -20,6 +20,7 @@ kiwipiepy       # Kiwi 형태소 분석기
 bm25s           # BM25s 리트리버
 huggingface_hub # 모델 다운로드 및 허브 관리
 chromadb
+wikipedia
 
 # --- Utility ---
 requests
