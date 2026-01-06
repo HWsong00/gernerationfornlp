@@ -6,7 +6,7 @@ python-dotenv
 
 # --- LLM Infrastructure (LlamaCpp) ---
 # 로컬/코랩 GPU 가속을 위해 설치 시 별도 환경변수 설정 권장
-llama-cpp-python
+# llama-cpp-python
 
 # --- LangChain & Workflow Orchestration ---
 langchain
@@ -21,7 +21,6 @@ bm25s           # BM25s 리트리버
 huggingface_hub # 모델 다운로드 및 허브 관리
 chromadb
 wikipedia
-
 # --- Utility ---
 requests
 setuptools

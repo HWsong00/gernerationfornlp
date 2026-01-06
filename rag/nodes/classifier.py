@@ -1,55 +1,94 @@
+import json
 from nodes.state import MCQState
-from utils.llm import get_llm
+from utils.llm import get_llm_client, MODEL_NAME
+from utils.wiki import WikipediaAPI, WikiChunker 
 
-def router_node(state: MCQState):
+def retrieve_node(state: MCQState, ensemble_retriever, reranker):
     """
-    ==== 과목 분류 및 RAG 여부 결정 노드 (OpenAI Format) =====
+    ==== 고도화된 지식 검색 노드 (Native OpenAI SDK / No Truncation) ====
     """
-    # 1. Baseline 테스트용 스킵 로직 (외부에서 설정된 경우 LLM 호출 안 함)
-    # 변수명 변경: is_korean_history -> needs_knowledge
-    if state.get("needs_knowledge") is not None:
-        current_val = state["needs_knowledge"]
-        print(f"⏩ [Router] 외부 설정값(지식 검색 필요: {current_val})이 감지되어 분류를 스킵합니다.")
-        return {"needs_knowledge": current_val}
-
-    llm = get_llm()
+    client = get_llm_client()
     
-    print(f"🔍 [Router] 지식 검색 필요성 판단 시작 (ID: {state.get('id', 'unknown')})")
-
-    # 2. OpenAI 형식의 메시지 구성
-    # 프롬프트 내의 분류 라벨은 모델의 이해를 돕기 위해 유지하거나 더 범용적인 단어로 바꿀 수 있습니다.
+    # --- Phase 1: 검색 키워드 추출 (Native JSON Mode) ---
+    system_content = (
+        "당신은 검색 최적화 전문가입니다. 제공된 문제 내용을 분석하여 위키피디아 검색에 최적화된 핵심 용어 3개를 추출하세요.\n"
+        "반드시 ['키워드1', '키워드2', '키워드3'] 형식의 JSON 리스트로만 답변하십시오."
+    )
+    
     messages = [
-        {
-            "role": "system", 
-            "content": (
-                "당신은 과목 분류 전문가입니다. 주어진 문제가 구체적인 외부 지식(역사, 경제, 정치, 법률 등) "
-                "검색이 필요한 문제인지 판단하세요.\n"
-                "- 지식 검색이 꼭 필요한 경우: 'KNOWLEDGE_REQUIRED'\n"
-                "- 일반 논리, 단순 독해, 상식으로 풀 수 있는 경우: 'GENERAL'\n"
-                "결과는 반드시 'KNOWLEDGE_REQUIRED' 또는 'GENERAL' 중 한 단어로만 답하세요."
-            )
-        },
-        {
-            "role": "user", 
-            "content": f"[지문]\n{state.get('paragraph', '')}\n\n[질문]\n{state.get('question', '')}"
-        }
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": f"지문: {state.get('paragraph', '')}\n질문: {state.get('question', '')}"}
     ]
-    
-    # 3. 직접 호출
-    response = llm.invoke(messages)
-    result = response.content.strip().upper()
-    
-    # 결과 판단 로직 변경
-    needs_knowledge = "KNOWLEDGE_REQUIRED" in result
-    print(f"📊 [Router] 분류 결과: {'지식 검색 필요(RAG)' if needs_knowledge else '일반 독해'}")
-    
-    return {"needs_knowledge": needs_knowledge}
 
-def route_decision(state: MCQState):
-    """
-    분기 결정 함수
-    """
-    # 변수명 변경 반영
-    if state.get("needs_knowledge", False):
-        return "retrieve"
-    return "general_solve"
+    print(f"🔑 [Retriever] 키워드 추출 시작 (ID: {state.get('id', 'unknown')})")
+    
+    try:
+        kw_response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=0,
+            response_format={"type": "json_object"},
+            max_tokens=150  # 키워드가 길어질 수 있으므로 여유 있게 설정
+        )
+        
+        raw_content = kw_response.choices[0].message.content.strip()
+        parsed_json = json.loads(raw_content)
+        
+        # JSON 구조에 따른 유연한 파싱
+        if isinstance(parsed_json, list):
+            search_queries = parsed_json
+        elif isinstance(parsed_json, dict) and 'keywords' in parsed_json:
+            search_queries = parsed_json['keywords']
+        else:
+            search_queries = list(parsed_json.values())[0] if parsed_json else []
+            
+        if not search_queries: raise ValueError("Empty keywords")
+        
+    except Exception as e:
+        # [수정] 너무 길면 자르는 로직 제거: 원본 질문 전체를 쿼리로 사용
+        print(f"⚠️ 키워드 추출 실패({e}), 질문 전체를 검색 쿼리로 사용합니다.")
+        search_queries = [state.get('question', '')]
+
+    print(f"🔎 [Retriever] 최종 쿼리 리스트: {search_queries}")
+
+    # --- Phase 2: 다중 출처 검색 (Local + Wiki) ---
+    candidate_docs = []
+    
+    # 1. 로컬 앙상블 검색
+    for query in search_queries[:2]:
+        candidate_docs.extend(ensemble_retriever.invoke_ensemble(query))
+
+    # 2. 위키백과 검색
+    try:
+        wiki_api = WikipediaAPI()
+        chunker = WikiChunker()
+        wiki_raw = wiki_api.search_and_fetch(search_queries)
+        wiki_chunks = chunker.chunk(wiki_raw)
+        for ch in wiki_chunks[:10]:
+            candidate_docs.append(ch['text']) 
+    except Exception as e:
+        print(f"❌ 위키 검색 실패: {e}")
+
+    # 중복 제거 및 텍스트 추출
+    raw_texts = []
+    for d in candidate_docs:
+        text = d.page_content if hasattr(d, 'page_content') else d
+        if text not in raw_texts:
+            raw_texts.append(text)
+
+    # --- Phase 3: 리랭킹 (Reranking) ---
+    print(f"⚖️ [Reranker] {len(raw_texts)}개 문서 재정렬 시작...")
+    
+    combined_query = f"{state['question']} {' '.join(state['choices'])}"
+    reranked_results = reranker.rerank(combined_query, raw_texts, top_k=3)
+    
+    final_context = []
+    for i, (text, score) in enumerate(reranked_results):
+        final_context.append(f"[{i+1}] (신뢰도: {score:.2f}) {text}")
+
+    context_str = "\n\n".join(final_context)
+    print(f"✅ [Retriever] 최종 컨텍스트 구성 완료")
+
+    return {
+        "retrieved_context": f"=== [엄선된 지식 컨텍스트] ===\n{context_str}"
+    }
