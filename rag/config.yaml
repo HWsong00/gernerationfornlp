@@ -21,7 +21,7 @@ rag:
   upstage_api_key: "YOUR_UPSTAGE_API_KEY"
   embedding_model: "embedding-query"
   vectorstore:
-    persist_directory: "/content/drive/MyDrive/csat/chromadb"
+    persist_directory: "YOUR_VECTORSTORE_DIRECTORY"
     collection_name: "CHRONICLE_solar"
   
   retriever:
@@ -31,5 +31,5 @@ rag:
 
 # 데이터 경로
 data:
-  input_csv: "/content/drive/MyDrive/csat/test.csv"
+  input_csv: "YOUR_INPUT_FILE.csv"
   output_csv: "submission.csv"
