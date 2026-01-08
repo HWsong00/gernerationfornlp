@@ -1,0 +1,17 @@
+# Core Dependencies
+langgraph
+pydantic
+llama-cpp-python
+langchain-upstage
+langchain-community
+langchain-classic
+langchain
+tqdm
+pandas
+pyyaml
+
+# Vector Store
+chromadb
+
+# Embeddings & Cross-Encoders
+sentence-transformers
