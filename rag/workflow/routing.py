@@ -1,20 +1,18 @@
-from typing import TypedDict, List
+"""
+조건부 라우팅 함수
+"""
+
+from typing import Literal
+from workflow.state import ProblemState
 
 
-class ProblemState(TypedDict):
-    """문제 풀이 워크플로우의 상태"""
-    # 입력
-    context: str  # 지문
-    question: str  # 문제
-    choices: List[str]
-    row_id: str  # 문제 ID
+def route_by_rag_decision(state: ProblemState) -> Literal["use_rag", "no_rag"]:
+    """
+    문제 분석 결과에 따라 RAG 사용 여부 결정
+    """
+    needs_rag = state.get('needs_external_knowledge', True)
 
-    # 중간 결과
-    problem_type: str  # 문제 유형 
-    needs_external_knowledge: bool  # 외부 지식 필요 여부
-    rag_context: str  # RAG로 검색된 보강 자료
-    reasoning: str  # 판단 근거
-
-    # 최종 결과
-    final_answer: str  # 최종 답변
-    confidence: float  # 신뢰도
+    if needs_rag:
+        return "use_rag"
+    else:
+        return "no_rag"
