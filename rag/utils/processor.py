@@ -1,7 +1,3 @@
-"""
-배치 처리 유틸리티
-"""
-
 from typing import Optional
 import pandas as pd
 from tqdm import tqdm
@@ -10,14 +6,14 @@ from workflow.graph import create_rag_decision_workflow
 
 def process(df, output_path: Optional[str] = None):
     """
-    데이터프레임의 모든 문제를 배치로 처리
+    데이터프레임의 모든 문제 풀이
 
     Args:
         df: 문제 데이터프레임 (context, question_display, choices, id 컬럼 필요)
         output_path: 결과 저장 경로 (선택)
 
     Returns:
-        results: 처리 결과 리스트
+        results: 풀이 결과 리스트
     """
     app = create_rag_decision_workflow()
     results = []
