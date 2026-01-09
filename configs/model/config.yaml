@@ -1,0 +1,16 @@
+# Global settings
+seed: 3407
+output_dir: "outputs/qwen3_finetune"
+
+# Training Hyperparameters
+training:
+  epochs: 1
+  lr: 2.0e-4
+  batch_size: 1
+  gradient_accumulation: 16
+  max_seq_length: 16384
+
+# Data paths
+data:
+  train_file: "data/train.jsonl"
+  sample_size: 2000
