@@ -8,7 +8,7 @@
 
 본 프로젝트는 **Gemini 3**의 우수한 추론 능력을 **Qwen3 8B** 모델에 증류(Distillation)하여, 한국어 수능(CSAT), KMMLU(한국사), MMMLU, KLUE MRC 등 고난도 과제에서의 성능을 극대화하는 것을 목표로 합니다.
 
-제한된 컴퓨팅 자원 환경에서 합성 데이터(Synthetic Data)를 적극적으로 활용하였으며, 단순한 Fine-tuning을 넘어 **지식 주입(Knowledge Injection)**, **CoT(Chain of Thought) 증류**, **추상화(Abstraction) 기반 학습** 등 다양한 실험적 방법론을 적용하고 그 한계와 가능성을 분석했습니다.
+제한된 컴퓨팅 자원 환경에서 합성 데이터(Synthetic Data)를 적극적으로 활용하였으며, 단순한 Fine-tuning을 넘어 **지식 주입(Knowledge Injection)**, **CoT(Chain of Thought) 증류** 등 다양한 실험적 방법론을 적용하고 그 한계와 가능성을 분석했습니다.
 
 ## 🎯 주요 목표 (Target Tasks)
 
@@ -64,9 +64,9 @@ python main.py --config configs/config.yaml
 python inference.py
 ```
 
-## 🧪 실험 내용 및 결과 (Experiments & Analysis)
+## 🧪 주요 실험 결과 (Key Experiments)
 
-본 프로젝트에서는 성능 향상을 위해 다음과 같은 4단계의 주요 실험을 진행했습니다.
+본 프로젝트에서는 성능 향상을 위해 다음과 같은 주요 실험을 진행했습니다.
 
 ### 1. 실험 개요 (Overview)
 Gemini 3의 추론 과정을 Qwen 모델에 학습시키고자 했으나, 학습 지표(Training Metric)의 상승이 테스트 셋(Test Set)의 성능 향상으로 직결되지 않는 **일반화(Generalization) 문제**가 지속적으로 관찰되었습니다.
@@ -80,10 +80,11 @@ Gemini 3의 추론 과정을 Qwen 모델에 학습시키고자 했으나, 학습
 *   **시도:** 'Gold Reasoning (CoT)' 데이터를 집중 학습하고, 도메인별 커리큘럼 및 내적 독백(Internal Monologue) 도입.
 *   **결과:** 모델이 논리적 사고 과정을 내재화하기보다, 교사 모델(Teacher Model)의 **추론 스타일을 단순 암기**하는 과적합(Overfitting) 경향을 보임.
 
-### 4. 추상화 기반 학습 (Abstraction Based Learning)
-*   **시도:** 인지 부하를 줄이기 위해 **추상화(Abstraction) 도출**과 **해답 생성** 과정을 분리하는 Warmstart SFT 시도 (Reinforcement Learning through Abstraction Discovery).
-*   **방법:** 별도의 LoRA 어댑터를 사용하여 각 과정을 독립적으로 학습.
-*   **결과:** 합성 데이터의 품질 관리 난이도로 인해 유의미한 성능 개선 달성 실패.
+## ⚠️ 한계점 및 향후 과제 (Limitations & Future Work)
+
+### 추상화 기반 학습 (Abstraction Based Learning - Experimental)
+*   **설계:** 인지 부하를 줄이기 위해 **추상화(Abstraction) 도출**과 **해답 생성** 과정을 분리하는 Warmstart SFT (Reinforcement Learning through Abstraction Discovery) 구조를 설계했습니다.
+*   **한계:** 시간 및 컴퓨팅 자원의 제약으로 인해 핵심 단계인 RL 학습까지 온전히 진행하지 못했습니다. 또한, 초기 Warmstart 단계에서 합성 데이터의 품질 관리 이슈로 인해 뚜렷한 성능 향상을 입증하지 못하여, 이를 향후 연구 과제(Future Work)로 남겨두었습니다.
 
 ---
 *Created by [Team NLP-05] for Boostcamp AI Tech 8.*
