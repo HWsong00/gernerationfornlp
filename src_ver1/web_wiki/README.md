@@ -1,45 +1,58 @@
-```mermaid
-graph TD
-    %% 1. 노드 정의
-    Start((START))
-    Classify[Classifier Node<br/><i>router_node</i>]
-    Decision{Need External<br/>Knowledge?}
-    
-    Retrieve[Retrieval Node<br/><i>Ensemble + Rerank</i>]
-    RAGSolve[RAG Solver Node<br/><b>ko_history_solve</b>]
-    GeneralSolve[General Solver Node<br/><i>general_solve</i>]
-    
-    Parse[Parser Node<br/><i>parser_node</i>]
-    Check{Is Answer<br/>Extracted?}
-    Recovery[Recovery Node<br/><i>Emergency Extraction</i>]
-    Finish((END))
+# 수능형 문제 풀이 Agent RAG (Wikipedia API 기반)
 
-    %% 2. 흐름 연결
-    Start --> Classify
-    Classify --> Decision
+> **목표**: 수능형(지문·문항·선지 기반) 객관식 문제에서 **외부 지식 필요 여부를 판별**하고, 필요 시 **Wikipedia API 기반 web 검색&reranking**을 통해 근거를 수집하여 정답 선택의 일관성과 정확도를 향상시키는 Agent 파이프라인.
 
-    %% RAG 경로 (검색 -> RAG 풀이)
-    Decision -- "Yes (History/RAG)" --> Retrieve
-    Retrieve --> RAGSolve
-    RAGSolve --> Parse
+---
 
-    %% 일반 경로 (직접 풀이)
-    Decision -- "No (General)" --> GeneralSolve
-    GeneralSolve --> Parse
+## 목차
+- [프로젝트 개요](#프로젝트-개요)
+- [핵심 특징](#핵심-특징)
+- [전체 RAG 검색 전략](#전체-rag-검색-전략)
+- [플로우차트](#플로우차트)
+- [모듈 구조](#모듈-구조)
+- [실행 방법](#실행-방법)
+- [결과 분석](#결과-분석)
+- [주의사항](#주의사항)
+- [라이선스](#라이선스)
 
-    %% 검증 및 복구
-    Parse --> Check
-    Check -- "Valid Answer" --> Finish
-    Check -- "N/A or Error" --> Recovery
-    
-    Recovery --> Finish
+---
 
-    %% 3. 스타일링 (RAG 경로를 더 강조)
-    style Start fill:#f9f,stroke:#333
-    style Finish fill:#f9f,stroke:#333
-    style Decision fill:#fff9c4,stroke:#fbc02d
-    style Retrieve fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    style RAGSolve fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    style GeneralSolve fill:#f5f5f5,stroke:#9e9e9e
-    style Recovery fill:#ffebee,stroke:#c62828
-```
+## 프로젝트 개요
+EDA를 통해 모델이 틀리는 문제는 거의 맞추지 못한다는 점에서 모델이 문제의 정오 판단을 위한 정보가 부족하다고 판단하였습니다. 
+이에 모델의 외부지식이 필요한 문제를 판단하고, 검색증강 과정으로 넘어가기 위해 Qwen3-30B-A3B-Instruct를 사용하여 다음과 같은 파이프라인을 설계했습니다.
+1) **외부지식 필요성 판단(게이팅)** → 2) **Wikipedia api 기반 검색** → 3) **벡터 검색 및 reranking** → 4) **context 기반 정답 선택**  
+
+
+---
+
+## 핵심 특징
+
+### 1) 외부지식 필요성 판단(게이팅)
+EDA 결과, 모델이 틀리는 문제는 동일 문제에서 반복적으로 **거의 맞추지 못하는 경향**을 보완하기 위해 문제별로 외부 검색증강(RAG) 단계로 넘어갈지 결정하는 모듈을 구성했습니다.
+
+- 사용 모델: `Qwen3-30B-A3B-Instruct`
+
+### 2) 외부 정보 수집 전략(Wikipedia Web Search 기반)
+RAG 성능 향상을 위해서는 충분한 DB 범위가 필요하나, 제한된 코퍼스만으로는 커버리지에 한계가 있습니다.  
+따라서 **Wikipedia API(검색 + 본문 수집)**를 기반으로, 정확성과 수집 범위를 동시에 고려한 수집 전략을 사용합니다.
+
+- 키워드 추출
+  - 문제/선지에서 **고유명사 중심 추출**
+- 추출된 키워드로 Wikipedia Web Search → 관련 문서 본문 수집
+
+### 3) 검색-reranking 결합(Top-30 → Rerank → Top-3)
+- 1차: 벡터 스토리지에서 본문과 선지에 관련된 `top 30` dense RAG 형식으로 검색
+- 2차: 본문-선지와의 유사도를 점수 기준으로 **reranking** 후 `top 3` 선택
+
+---
+
+## 전체 RAG 검색 전략
+A. **교과서 한국사 용어 설명**을 임베딩 벡터화하여 벡터 스토리지에 저장  
+B. 문제/선지에 존재하는 **고유명사 위주의 키워드 추출**  
+C. Wikipedia에서 고유명사 관련 **모든 문서 본문 추출**  
+D. Wikipedia 결과 파싱 후 **벡터 스토리지에 저장**  
+E. 벡터 스토리지에서 문제/선지 관련 문서 **top 30 추출**  
+F. 본문-선지 관련성 기준으로 **reranking 후 top 3 선택**
+
+---
+<img width="814" height="493" alt="image" src="https://github.com/user-attachments/assets/f6757fc9-4079-4ff9-8d98-3bbe664793dd" />
