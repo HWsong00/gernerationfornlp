@@ -4,7 +4,7 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/)
 [![Transformers](https://img.shields.io/badge/Transformers-yellow.svg)](https://huggingface.co/docs/transformers/)
 [![ORPO](https://img.shields.io/badge/Method-ORPO-green.svg)](https://arxiv.org/abs/2403.07691)
 
@@ -13,17 +13,35 @@
 ---
 
 ## Project Overview
-
-본 프로젝트는 **Gemini-3-Flash(Teacher)**와 **Qwen3-235B/14B(Student)** 간의 추론 능력 격차를 해소하기 위한 **Reasoning Distillation** 파이프라인입니다.
+본 프로젝트는 **Naver Boostcamp AI Tech 8기**의 일환으로 진행된 프로젝트 수행 결과입니다.**
+**KMMLU,수능,KMRC 데이터 등 다양한 고난이도 추론 문제에서 우수한 성능을 보이는 Gemini-3-Flash 모델과 Qwen3 시리즈 모델 간의 추론 능력 격차를 해소하기 위해 설계된 **Reasoning Distillation via Analogical Reasoning Transfer**  를제안합니다.
 
 ### Core Philosophy
 
-기존의 Knowledge Distillation이 Teacher의 지식을 압축하여 전달하는 것에 집중했다면, 본 연구는 **추론 과정 자체를 학습**시키는 것을 목표로 합니다.
+2025년 현재, Qwen3와 같은 오픈소스 LLM은 이미 광범위한 지식을 보유하고 있으며, 일반적인 질의응답이나 요약 작업에서 우수한 성능을 보입니다. 그러나 Gemini-3-Flash와 같은 최신 상용 LLM과 비교했을 때, 복잡한 추론 문제에서는 여전히 성능 격차가 존재합니다.
 
-```
-기존 접근: 지식 압축 (What to know)
-본 연구: 추론 경로 정렬 (How to think)
-```
+**문제의 본질: 지식이 아닌 추론 경로의 부재**
+
+Qwen3-14B는 이미 충분한 사전학습을 거쳤기 때문에, 지식의 절대량 측면에서는 부족함이 없습니다. 실제로 개별 사실(facts)에 대한 질문에는 높은 정확도를 보입니다. 그러나 여러 정보를 연결하고, 인과관계를 추론하며, 논리적 모순을 식별해야 하는 복잡한 문제에서는 실패합니다.
+
+이는 **"무엇을 아는가(What to know)"가 아니라 "어떻게 생각하는가(How to think)"**의 문제입니다. 모델이 파편화된 지식을 적절한 순서로 연결하고, 올바른 판단 기준을 적용하는 **추론 경로(Reasoning Path)**가 정렬되지 않았기 때문입니다.
+
+**SFT의 한계와 위험성**
+
+전통적인 접근법은 Supervised Fine-Tuning(SFT)으로 정답 데이터를 추가 학습시키는 것입니다. 그러나 이미 고도로 학습된 모델에 SFT를 적용하면 다음과 같은 위험이 있습니다:
+
+1. **Distribution Collapse**: 적은 양의 SFT 데이터로 인해 모델의 원래 출력 분포가 왜곡되고, 특정 패턴에 과적합될 수 있습니다.
+2. **Catastrophic Forgetting**: 새로운 데이터 학습 과정에서 기존에 학습된 능력이 손상될 수 있습니다.
+3. **데이터 효율성 문제**: 고품질 SFT 데이터를 대규모로 구축하는 것은 비용과 시간이 많이 소요됩니다.
+
+**이번 솔루션의 접근: Reasoning Path Alignment via Preference Learning**
+
+기존의 Knowledge Distillation이 Teacher의 지식을 압축하여 전달하는 것에 집중했다면, 본 연구는 **추론 과정 자체를 학습**시키는 것을 목표로 합니다. SFT 대신 **ORPO(Odds Ratio Preference Optimization)**를 활용하여:
+
+- **모델의 기존 분포를 보존**하면서도
+- **올바른 추론 경로는 강화**하고
+- **잘못된 추론 경로는 억제**하는
+방식으로 안전하게 정렬합니다.
 
 **핵심 전략**
 
@@ -43,6 +61,8 @@
 **평가 모델**: Qwen3-14B  
 **평가 데이터**: Upstage 제공 수능 문제 테스트셋 (총 425문항)
 
+![image.png](./asset/image.png)
+
 | 과목 | 문제 수 | Baseline | Fine-tuned | Improvement |
 |:----:|:-------:|:--------:|:----------:|:-----------:|
 | 국어 | 189 | - | - | - |
@@ -52,39 +72,23 @@
 | 사문 | 48 | - | - | - |
 | **Total** | **425** | - | - | - |
 
-**상세 분석**: [`eda`](../../tree/eda) 브랜치에서 문제 유형별 성능 분석 및 시각화 확인
+<!-- **상세 분석**: [`eda`](../../tree/eda) 브랜치에서 문제 유형별 성능 분석 및 시각화 확인 -->
 
 ---
 
 ## Repository Architecture
 
-본 프로젝트는 **모듈별 브랜치 구조**로 설계되었습니다. 각 브랜치는 독립적인 실험 단계를 담당하며, 재현성과 유지보수를 위해 명확하게 분리되어 있습니다. main 브랜치는 전체 아키텍처와 방법론을 설명하는 허브 역할을 수행합니다.
+본 프로젝트는 **모노레포 구조**로 설계되었습니다. 각 모듈은 독립적인 실험 단계를 담당하며, 재현성과 유지보수를 위해 명확하게 분리되어 있습니다. `feature/ver-3` 브랜치가 전체 파이프라인을 포함하는 메인 브랜치 역할을 수행합니다.
 
-```mermaid
-graph TB
-    A[main: 프로젝트 개요 & 방법론] --> B[seed-data: 시드 문항 생성]
-    B --> C[preference-data: DPO 데이터셋 구축]
-    C --> D[orpo-train: 모델 학습]
-    D --> E[eda: 성능 분석]
-    
-    style A fill:#e1f5ff
-    style B fill:#fff3e1
-    style C fill:#ffe1f5
-    style D fill:#e1ffe1
-    style E fill:#f5e1ff
-```
+### Module Overview
 
-### Branch Details
-
-| Branch | 역할 | 주요 컴포넌트 | README 링크 |
-|--------|------|--------------|-------------|
-| **`main`** | 전체 프로젝트 개요 및 방법론 | 이 문서 | 현재 페이지 |
-| **`seed-data`** | 시드 문항 수집 및 Teacher/Student 응답 생성 | `seed_generator.py`<br>`prompts/` | [바로가기](../../tree/seed-data) |
-| **`preference-data`** | Preference Pair 데이터셋 구축 | `dataset_builder.py`<br>`augment/` | [바로가기](../../tree/dpo-dataset) |
-| **`orpo-train`** | ORPO 기반 모델 학습 | `train.py`<br>`config/`<br>`scripts/` | [바로가기](../../tree/orpo-train) |
-| **`eda`** | 성능 분석 및 오류 케이스 연구 | `notebooks/`<br>`visualize/` | [바로가기](../../tree/eda) |
-
----
+| Module | 역할 | 주요 컴포넌트 | README |
+|--------|------|--------------|--------|
+| **common** | 공통 유틸리티 및 설정 | `data_loader.py`, `prompts.py`, `config.py` | - |
+| **seed-data** | 시드 문항 수집 및 Hard Negative 식별 | `generate.py`, `prompts/` | [상세 문서](./seed-data/README.md) |
+| **preference-data** | Analogical Transfer 기반 데이터 증강 | `augment.py`, `templates/` | [상세 문서](./preference-data/README.md) |
+| **orpo-train** | ORPO 학습 파이프라인 (Hydra 설정) | `train.py`, `config/`, `scripts/` | [상세 문서](./orpo-train/README.md) |
+| **eda** | 성능 분석 및 오류 케이스 연구 | `notebooks/`, `visualize/` | [상세 문서](./eda/README.md) |
 
 ## Methodology
 
