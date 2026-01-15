@@ -12,10 +12,9 @@
 
 ## 🎯 주요 목표 (Target Tasks)
 
-*   **한국어 대학수학능력시험 (Korean CSAT)**
-*   **KMMLU (Korean History 등)**
-*   **MMMLU**
-*   **KLUE MRC** (Work in Progress)
+*   **수능형 문제** (국어, 사회 영역(윤리, 정치, 사회)과 비슷한 문제)
+*   **KMMLU** (Korean History), **MMMLU** (HighSchool 데이터 중 역사, 경제, 정치, 지리, 심리)
+*   **KLUE MRC** (경제, 교육산업, 국제, 부동산, 사회, 생활, 책마을)
 
 ## 🏗️ 폴더 구조 (Project Structure)
 
