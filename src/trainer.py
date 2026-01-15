@@ -39,6 +39,7 @@ def run_training(model, tokenizer, cfg):
             gradient_checkpointing = True,
             save_strategy = "epoch",
             save_total_limit = 3,
+            neftune_noise_alpha = 5,
         ),
     )
 
