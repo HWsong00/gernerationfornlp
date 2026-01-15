@@ -9,11 +9,7 @@
 - [핵심 특징](#핵심-특징)
 - [전체 RAG 검색 전략](#전체-rag-검색-전략)
 - [플로우차트](#플로우차트)
-- [모듈 구조](#모듈-구조)
-- [실행 방법](#실행-방법)
 - [결과 분석](#결과-분석)
-- [주의사항](#주의사항)
-- [라이선스](#라이선스)
 
 ---
 
@@ -55,4 +51,12 @@ E. 벡터 스토리지에서 문제/선지 관련 문서 **top 30 추출**
 F. 본문-선지 관련성 기준으로 **reranking 후 top 3 선택**
 
 ---
+## 플로우차트
+
 <img width="814" height="493" alt="image" src="https://github.com/user-attachments/assets/f6757fc9-4079-4ff9-8d98-3bbe664793dd" />
+
+---
+## 결과 분석
+<img width="701" height="509" alt="image" src="https://github.com/user-attachments/assets/6b4ae423-2570-49da-809d-93a503561bb8" />
+
+> 최종 private score에 대해 1.52%p 향상 (80.68 % -> 82.20 %)
