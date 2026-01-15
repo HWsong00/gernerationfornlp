@@ -53,10 +53,11 @@ F. 본문-선지 관련성 기준으로 **reranking 후 top 3 선택**
 ---
 ## 플로우차트
 
-<img width="814" height="493" alt="image" src="https://github.com/user-attachments/assets/f6757fc9-4079-4ff9-8d98-3bbe664793dd" />
+<center><img width="814" height="493" alt="image" src="https://github.com/user-attachments/assets/f6757fc9-4079-4ff9-8d98-3bbe664793dd" /></center>
 
 ---
 ## 결과 분석
+<center>
 |카테고리|총 문제수|W/O RAG 정답수|with RAG 정답수| 
 |:-----:|:-----:|:-----:|:-----:|
 |한국사|32|12|16|
@@ -71,8 +72,8 @@ F. 본문-선지 관련성 기준으로 **reranking 후 top 3 선택**
 |심리|3|3|3|
 |지리|2|2|2|
 |책마을|9|9|9|
-
-<img width="701" height="509" alt="image" src="https://github.com/user-attachments/assets/6b4ae423-2570-49da-809d-93a503561bb8" />
+</center>
+<center><img width="701" height="509" alt="image" src="https://github.com/user-attachments/assets/6b4ae423-2570-49da-809d-93a503561bb8" /></center>center>
 
 > 최종 private score에 대해 1.52%p 향상 (80.68 % -> 82.20 %)
 
