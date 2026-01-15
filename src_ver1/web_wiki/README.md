@@ -55,6 +55,66 @@ F. 본문-선지 관련성 기준으로 **reranking 후 top 3 선택**
 
 <center><img width="814" height="493" alt="image" src="https://github.com/user-attachments/assets/f6757fc9-4079-4ff9-8d98-3bbe664793dd" /></center>
 
+
+## 폴더구조
+```
+src_ver1/web_wiki/
+├── main.py              # 전체 파이프라인 실행 엔트리 포인트
+├── requirements.txt     
+├── config/              # 설정 관리
+│   └── settings.py      
+├── graph/               # LangGraph 아키텍처
+│   └── workflow.py      # StateGraph 및 노드 연결 로직
+├── nodes/               # 독립 추론 단위
+│   ├── state.py         # Graph State 정의 (MCQState)
+│   ├── classifier.py    # 외부 지식 필요성 판단 노드
+│   ├── retriever.py     # 검색 및 컨텍스트 수집 노드
+│   ├── solver.py        # RAG/General 추론 솔버 노드
+│   └── parser.py        # 정답 추출 및 복구 노드
+├── retrievers/          # 검색 엔진 및 쿼리 최적화 로직
+│   ├── ensemble.py      # Hybrid(Sparse+Dense) 검색 가중치 앙상블
+│   ├── tokenizer.py     # Kiwi 토크나이저 기반 한국어 전처리
+|   ├── dense_retriever.py  
+│   └── sparse_retriever.py
+└── utils/               # 인프라 및 외부 연동 유틸리티
+    ├── wiki.py          # Wikipedia API 검색 및 수집
+    ├── reranker.py      # BGE-Reranker 재순위화
+    ├── langfuse.py      # LLM Observability 모니터링
+    └── llm.py           # llama-server 관리 및 헬스 체크
+```
+---
+## 실행 방법
+
+#### 1.의존성 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+
+#### 2. 서버 백그라운드 실행
+```
+PORT=8081
+./llama-server \
+  --model "models/Qwen3-30B-A3B-Instruct-2507-UD-Q6_K_XL.gguf" \
+  --n-gpu-layers -1 \
+  --ctx-size 14400 \
+  --parallel 2 \
+  --cont-batching \
+  --flash-attn on \
+  --port $PORT \
+  --host 0.0.0.0 \
+  > server.log 2>&1 &
+```
+
+#### 3. 메인 파이프라인 실행
+
+```
+python main.py
+```
+
+
+
 ---
 ## 결과 분석
 |카테고리|총 문제수|W/O RAG 정답수|with RAG 정답수| 
