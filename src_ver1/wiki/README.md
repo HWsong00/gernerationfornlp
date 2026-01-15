@@ -1,6 +1,6 @@
-# 수능형 문제 풀이 Agent with RAG On/Off Decision
+# 수능형 문제 풀이 Agent with Adaptive RAG
 
-> 문제 유형을 분석하여 외부 지식이 필요한 경우에만 RAG를 사용하는 지능형 문제 풀이 시스템
+> 문제 유형을 분석하여 외부 지식이 필요한 경우에만 RAG를 사용하는 시스템
 
 ## 목차
 
@@ -87,9 +87,7 @@ project_root/
 pip install -r requirements.txt
 ```
 
-### 설정 파일 구성
-
-#### `config.yaml` 수정
+#### 설정 파일 구성
 
 ```yaml
 # LLM 모델 설정
@@ -120,14 +118,18 @@ python main.py
 
 ## 결과 분석
 
-### 성능 지표
+### 성능 비교
 
 <img width="590" height="390" alt="Image" src="https://github.com/user-attachments/assets/3a83ff01-c44c-436f-ba39-85cbab87426d" />
 
+> 최종 private score에 대해 3.43%p 향상
+
+<img width="3869" height="1769" alt="Image" src="https://github.com/user-attachments/assets/47fcd66a-8473-4565-8287-41a2f8f3eb1f" />
+
+> validation 셋 추론 결과 1.52%p 향상
 
 
-
-### 주요 기술 
+#### 주요 기술 
 
 - **LangGraph**: 워크플로우 오케스트레이션
 - **llama-cpp-python**: LLM 추론
