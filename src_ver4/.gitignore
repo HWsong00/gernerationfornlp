@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.env
+venv/
+
+# Model Weights & Checkpoints (Do NOT upload these to GitHub)
+lora_*/
+checkpoints/
+outputs/
+*.pt
+*.bin
+*.safetensors
+
+# Data
+*.jsonl
+*.csv

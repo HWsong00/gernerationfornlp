@@ -1,0 +1,10 @@
+torch
+transformers
+datasets
+trl
+pandas
+scikit-learn
+tqdm
+# Installing Unsloth directly from source is often required for the latest updates
+unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
+unsloth_zoo
