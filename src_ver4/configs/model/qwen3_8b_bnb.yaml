@@ -1,0 +1,19 @@
+# configs/model/qwen3_bnb.yaml
+model:
+  name: "unsloth/Qwen3-8B-unsloth-bnb-4bit"
+  max_seq_length: 16384
+  load_in_4bit: true
+
+lora:
+  r: 64
+  alpha: 128
+  dropout: 0
+  bias: "none"
+  target_modules: 
+    - "q_proj" 
+    - "k_proj" 
+    - "v_proj" 
+    - "o_proj" 
+    - "gate_proj" 
+    - "up_proj" 
+    - "down_proj"
