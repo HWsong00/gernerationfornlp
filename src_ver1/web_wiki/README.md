@@ -1,0 +1,138 @@
+# 수능형 문제 풀이 Agent RAG (Wikipedia API 기반)
+
+> **목표**: 수능형(지문·문항·선지 기반) 객관식 문제에서 **외부 지식 필요 여부를 판별**하고, 필요 시 **Wikipedia API 기반 web 검색&reranking**을 통해 근거를 수집하여 정답 선택의 일관성과 정확도를 향상시키는 Agent 파이프라인.
+
+---
+
+## 목차
+- [프로젝트 개요](#프로젝트-개요)
+- [핵심 특징](#핵심-특징)
+- [전체 RAG 검색 전략](#전체-rag-검색-전략)
+- [플로우차트](#플로우차트)
+- [결과 분석](#결과-분석)
+
+---
+
+## 프로젝트 개요
+EDA를 통해 모델이 틀리는 문제는 거의 맞추지 못한다는 점에서 모델이 문제의 정오 판단을 위한 정보가 부족하다고 판단하였습니다. 
+이에 모델의 외부지식이 필요한 문제를 판단하고, 검색증강 과정으로 넘어가기 위해 Qwen3-30B-A3B-Instruct를 사용하여 다음과 같은 파이프라인을 설계했습니다.
+1) **외부지식 필요성 판단(게이팅)** → 2) **Wikipedia api 기반 검색** → 3) **벡터 검색 및 reranking** → 4) **context 기반 정답 선택**  
+
+
+---
+
+## 핵심 특징
+
+### 1) 외부지식 필요성 판단(게이팅)
+EDA 결과, 모델이 틀리는 문제는 동일 문제에서 반복적으로 **거의 맞추지 못하는 경향**을 보완하기 위해 문제별로 외부 검색증강(RAG) 단계로 넘어갈지 결정하는 모듈을 구성했습니다.
+
+- 사용 모델: `Qwen3-30B-A3B-Instruct`
+
+### 2) 외부 정보 수집 전략(Wikipedia Web Search 기반)
+RAG 성능 향상을 위해서는 충분한 DB 범위가 필요하나, 제한된 코퍼스만으로는 커버리지에 한계가 있습니다.  
+따라서 **Wikipedia API(검색 + 본문 수집)**를 기반으로, 정확성과 수집 범위를 동시에 고려한 수집 전략을 사용합니다.
+
+- 키워드 추출
+  - 문제/선지에서 **고유명사 중심 추출**
+- 추출된 키워드로 Wikipedia Web Search → 관련 문서 본문 수집
+
+### 3) 검색-reranking 결합(Top-30 → Rerank → Top-3)
+- 1차: 벡터 스토리지에서 본문과 선지에 관련된 `top 30` dense RAG 형식으로 검색
+- 2차: 본문-선지와의 유사도를 점수 기준으로 **reranking** 후 `top 3` 선택
+
+---
+
+## 전체 RAG 검색 전략
+A. **교과서 한국사 용어 설명**을 임베딩 벡터화하여 벡터 스토리지에 저장  
+B. 문제/선지에 존재하는 **고유명사 위주의 키워드 추출**  
+C. Wikipedia에서 고유명사 관련 **모든 문서 본문 추출**  
+D. Wikipedia 결과 파싱 후 **벡터 스토리지에 저장**  
+E. 벡터 스토리지에서 문제/선지 관련 문서 **top 30 추출**  
+F. 본문-선지 관련성 기준으로 **reranking 후 top 3 선택**
+
+---
+## 플로우차트
+
+<center><img width="814" height="493" alt="image" src="https://github.com/user-attachments/assets/f6757fc9-4079-4ff9-8d98-3bbe664793dd" /></center>
+
+
+## 폴더구조
+```
+src_ver1/web_wiki/
+├── main.py              # 전체 파이프라인 실행 엔트리 포인트
+├── requirements.txt     
+├── config/              # 설정 관리
+│   └── settings.py      
+├── graph/               # LangGraph 아키텍처
+│   └── workflow.py      # StateGraph 및 노드 연결 로직
+├── nodes/               # 독립 추론 단위
+│   ├── state.py         # Graph State 정의 (MCQState)
+│   ├── classifier.py    # 외부 지식 필요성 판단 노드
+│   ├── retriever.py     # 검색 및 컨텍스트 수집 노드
+│   ├── solver.py        # RAG/General 추론 솔버 노드
+│   └── parser.py        # 정답 추출 및 복구 노드
+├── retrievers/          # 검색 엔진 및 쿼리 최적화 로직
+│   ├── ensemble.py      # Hybrid(Sparse+Dense) 검색 가중치 앙상블
+│   ├── tokenizer.py     # Kiwi 토크나이저 기반 한국어 전처리
+|   ├── dense_retriever.py  
+│   └── sparse_retriever.py
+└── utils/               # 인프라 및 외부 연동 유틸리티
+    ├── wiki.py          # Wikipedia API 검색 및 수집
+    ├── reranker.py      # BGE-Reranker 재순위화
+    ├── langfuse.py      # LLM Observability 모니터링
+    └── llm.py           # llama-server 관리 및 헬스 체크
+```
+---
+## 실행 방법
+
+#### 1.의존성 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+
+#### 2. 서버 백그라운드 실행
+```
+PORT=8081
+./llama-server \
+  --model "models/Qwen3-30B-A3B-Instruct-2507-UD-Q6_K_XL.gguf" \
+  --n-gpu-layers -1 \
+  --ctx-size 14400 \
+  --parallel 2 \
+  --cont-batching \
+  --flash-attn on \
+  --port $PORT \
+  --host 0.0.0.0 \
+  > server.log 2>&1 &
+```
+
+#### 3. 메인 파이프라인 실행
+
+```
+python main.py
+```
+
+
+
+---
+## 결과 분석
+|카테고리|총 문제수|W/O RAG 정답수|with RAG 정답수| 
+|:-----:|:-----:|:-----:|:-----:|
+|한국사|32|12|16|
+|정치|37|28|28|
+|경제|23|19|21|
+|역사|68|57|56|
+|교육산업|8|7|6|
+|국제|9|8|9|
+|사회|14|13|12|
+|부동산|58|54|54|
+|생활|1|1|1|
+|심리|3|3|3|
+|지리|2|2|2|
+|책마을|9|9|9|
+<center><img width="701" height="509" alt="image" src="https://github.com/user-attachments/assets/6b4ae423-2570-49da-809d-93a503561bb8" /></center>
+
+> 최종 private score에 대해 1.52%p 향상 (80.68 % -> 82.20 %)
+
+
