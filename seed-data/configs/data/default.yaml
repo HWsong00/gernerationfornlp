@@ -1,0 +1,12 @@
+# Data Configuration
+input_path: "data/filtered_eco_hr_kr_df.csv"
+output_path: "outputs/cot_dpo_dataset.jsonl"
+
+# Data processing
+columns:
+  problems: "problems"
+  paragraph: "paragraph"
+  
+validation:
+  check_missing: true
+  skip_invalid: true
