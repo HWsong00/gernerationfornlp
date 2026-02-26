@@ -1,11 +1,3 @@
-<div align=center>
-Example History Router Flowchart
-</div>
-<div align=center>
-<img width="1290" height="781" alt="image" src="https://github.com/user-attachments/assets/ed38276a-672e-4f51-9f1e-91add239cd7a" />
-</div>
-
-
 # Project Hub (main)
 
 이 레포의 `main` 브랜치는 **단일 구현을 합치는 목적이 아니라**,  
