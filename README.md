@@ -54,6 +54,16 @@
 <img width="8192" height="2798" alt="Image" src="https://github.com/user-attachments/assets/5107692e-5032-4d0a-9bab-eeb4d4e9f5be"/>
 
 
+
+### 노드별 기능 워크플로우
+<div align=center>
+</div>
+<div align=center>
+<img width="1290" height="781" alt="image" src="https://github.com/user-attachments/assets/ed38276a-672e-4f51-9f1e-91add239cd7a" />
+</div>
+
+
+
 ### 모듈 구조
 
 ```
